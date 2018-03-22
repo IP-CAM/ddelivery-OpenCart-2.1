@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+	<name>Ddelivery</name>
+	<id>Ddelivery_module</id>		
+	<code>Ddelivery_module</code>		
+	<version>0.1</version>
+	<author>Ddelivery</author>
+	<link>ddelivery.ru</link>
+	<file path="catalog/view/theme/*/template/checkout/simplecheckout.tpl">
+		<operation>
+			<search><![CDATA[
+					<?php if (!$ajax && !$popup && !$as_module) { ?>
+				]]></search>
+			<add position="after"><![CDATA[
+				<script type="text/javascript" src="https://sdk.ddelivery.ru/assets/js/ddelivery_v2.js"></script>
+				<script type="text/javascript" src="/catalog/view/javascript/ddelivery-oc-simple.js"></script>
+
+				<style>
+				    .row-shipping_field28 label, .row-shipping_field28 input{
+				        display: none!important;
+				    }
+				</style>
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/view/theme/*/template/checkout/simplecheckout_shipping.tpl">
+		<operation>
+				<search><![CDATA[
+					<?php if (!empty($quote['description'])) { ?>
+				]]></search>
+				<add position="before"><![CDATA[
+					<?php if (isset($quote['ddelivery'])) { ?>
+                        <div style="display: none" id="ddelivery-widget-error" class="simplecheckout-error-text simplecheckout-rule" data-rule="ddeliveryChecked">Подтвердите способ доставки!</div>
+                        <style>
+                            #ddelivery-widget iframe{
+                                max-width: 100%;
+                                position: initial!important;
+                            }
+                            #ddelivery-widget-error {
+                                margin: 10px 0;
+                            }
+                        </style>
+                        <div id="ddelivery-widget"></div>
+                    <?php } ?>
+				]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/checkout/success.php">
+		<operation>
+			<search><![CDATA[
+			if (isset($this->session->data['order_id'])) {
+			]]></search>
+			<add position="after"><![CDATA[
+				if ($this->session->data['shipping_method']['code'] == "ddelivery.ddelivery") {
+					$this->load->model('shipping/ddelivery');
+					$this->model_shipping_ddelivery->sendOrder($this->session->data['order_id']);
+					unset($this->session->data['ddelivery_token']);
+					unset($this->session->data['ddelivery_price']);
+					unset($this->session->data['ddelivery_order_id']);
+				}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/model/checkout/order.php">
+		<operation>
+			<search><![CDATA[
+			$this->event->trigger('pre.order.add', $data);
+			]]></search>
+			<add position="after"><![CDATA[
+		        if ($data['shipping_code'] == "ddelivery.ddelivery") {
+					$ddelivery_sql = ", ddelivery_id = '" . $this->db->escape($this->session->data['ddelivery_order_id']) . "'";
+				} else {
+					$ddelivery_sql = "";
+				}
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			$this->event->trigger('pre.order.edit', $data);
+			]]></search>
+			<add position="after"><![CDATA[
+				$ddelivery_sql = "";
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			'shipping_code'           => $order_query->row['shipping_code'],
+			]]></search>
+			<add position="after"><![CDATA[
+				'ddelivery_id'            => $order_query->row['ddelivery_id'],
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			$this->db->escape($data['shipping_code']) . "', comment = '"
+			]]></search>
+			<add position="replace"><![CDATA[
+			$this->db->escape($data['shipping_code']) ."'". $ddelivery_sql . ", comment = '"
+			]]></add>
+		</operation>
+	</file>
+</modification>
